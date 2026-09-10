@@ -66,6 +66,16 @@ const PAGES = [
     content: "<p>Kontakt podaci se postavljaju u CMS-u, pod Postavke.</p>",
   },
   {
+    // Ova stranica ispod svog teksta automatski ispisuje pitanja iz tabele `faqs`.
+    slug: "faq",
+    title: "Česta pitanja",
+    nav_label: null,
+    show_in_nav: false,
+    sort_order: 7,
+    content:
+      "<p>Odgovori na pitanja koja najčešće dobijamo. Ako ne nađete svoje, javite nam se preko kontakt forme.</p>",
+  },
+  {
     slug: "uslovi-koristenja",
     title: "Uslovi korištenja",
     nav_label: null,

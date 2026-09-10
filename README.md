@@ -53,16 +53,23 @@ Shop: `http://localhost:3000` · CMS: `http://localhost:3000/admin`
 
 ```
 app/
-  page.tsx              početna stranica
-  actions/              server akcije (forme)
-  admin/                CMS  (u izradi — faza 2)
-components/             UI komponente
+  page.tsx                 početna
+  shop/                    lista proizvoda (pretraga, sortiranje, akcije)
+  kategorija/[slug]/       kategorija + sve njene podkategorije
+  proizvod/[slug]/         stranica proizvoda
+  blog/, blog/[slug]/      blog
+  kontakt/                 kontakt forma + podaci
+  [slug]/                  stranice iz CMS-a (o-nama, faq, uslovi…)
+  actions/                 server akcije (forme)
+  admin/                   CMS  (u izradi — faza 2)
+components/                UI komponente
 lib/
   db.ts                 PostgreSQL pool + query helperi
   money.ts              valute, marže, zaokruživanje, format KM
   auth.ts               prijava u CMS (JWT u httpOnly kolačiću)
   settings.ts           postavke sajta
   queries.ts            upiti javnog dijela sajta
+  sort-options.ts       opcije sortiranja (dijeli ih klijent i server)
   slug.ts               slugovi sa našim slovima
 scripts/
   migrate.js            idempotentna migracija sheme
