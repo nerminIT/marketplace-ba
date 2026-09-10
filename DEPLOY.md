@@ -2,12 +2,12 @@
 
 ## Podešavanja u panelu
 
-| Polje              | Vrijednost                                                        |
-| ------------------ | ----------------------------------------------------------------- |
-| Repository         | `nerminIT/marketplace-ba`                                          |
-| Build Command      | `npm run build`                                                    |
-| **Start Command**  | `node scripts/migrate.js && ./node_modules/.bin/next start -p $PORT` |
-| Database           | PostgreSQL (uključiti)                                             |
+| Polje             | Vrijednost                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| Repository        | `nerminIT/marketplace-ba`                                                              |
+| Build Command     | `npm run build`                                                                         |
+| **Start Command** | `node scripts/migrate.js && node scripts/seed.js && ./node_modules/.bin/next start -p $PORT` |
+| Database          | PostgreSQL (uključiti)                                                                  |
 
 ### Zašto baš takav Start Command
 
@@ -19,6 +19,10 @@ izvrši — aplikacija se digne, a tabele ne postoje.
 
 `scripts/migrate.js` je idempotentan i neinteraktivan, pa je bezbjedno da se
 vrti na svakom restartu kontejnera.
+
+`scripts/seed.js` smije stajati u istom lancu trajno: pri prvom pokretanju
+upiše `seeded_at` u tabelu `settings` i od tada preskače početni sadržaj. Zato
+kategorija koju obrišeš u CMS-u **neće** biti vraćena sljedećim deployom.
 
 ## Port
 
@@ -44,15 +48,28 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ## Prvi deploy
 
 1. Uključiti PostgreSQL u panelu.
-2. Postaviti `AUTH_SECRET`.
-3. Deploy — `migrate.js` kreira tabele.
-4. Jednokratno pokrenuti seed da se napravi prvi admin. Dvije opcije:
-   - privremeno promijeniti Start Command u
-     `node scripts/migrate.js && node scripts/seed.js && ./node_modules/.bin/next start -p $PORT`,
-     deployati, pročitati lozinku iz log-a, pa vratiti Start Command nazad; ili
-   - pokrenuti seed lokalno protiv produkcijske baze, sa `DATABASE_URL`
-     postavljenim na produkcijski connection string.
-5. Prijaviti se na `/admin` i **odmah promijeniti lozinku**.
+2. Postaviti varijable: `AUTH_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
+   Ako `ADMIN_PASSWORD` izostaviš, seed generiše nasumičnu lozinku i ispiše je
+   u deploy logu — lakše je postaviti je sam.
+3. Deploy. U logu se vidi `[migrate] gotovo` pa `[seed] gotovo`.
+4. Otvoriti sajt.
+
+## Šta se vidi nakon prvog deploya
+
+Baza je prazna osim početnih kategorija i stranica, pa početna prikazuje hero,
+traku povjerenja, kategorije i newsletter — **bez proizvoda**, jer uvoz od
+dobavljača još nije podešen (faza 2).
+
+Da bi se vidio pun izgled sa proizvodima, jednom pokrenuti demo artikle:
+
+```bash
+node scripts/seed-demo.js
+```
+
+Lokalno je to `npm run db:demo`. Na OctaDeployu se pokreće tako što se
+privremeno doda u Start Command, ili lokalno uz `DATABASE_URL` postavljen na
+produkcijski connection string. Demo proizvodi imaju SKU koji počinje sa
+`DEMO-` i brišu se sa `node scripts/seed-demo.js --clear`.
 
 ## Napomene
 

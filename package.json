@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "node scripts/migrate.js",
-    "db:seed": "node scripts/seed.js"
+    "db:seed": "node scripts/seed.js",
+    "db:demo": "node scripts/seed-demo.js",
+    "db:demo:clear": "node scripts/seed-demo.js --clear"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.72.0",

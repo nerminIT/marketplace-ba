@@ -125,6 +125,23 @@ async function main() {
   await client.connect();
   console.log("[seed] povezan na bazu");
 
+  /**
+   * Zastita od "vaskrsavanja" obrisanog sadrzaja.
+   *
+   * Skripta smije stajati u OctaDeploy Start Commandu i vrtjeti se na svaki
+   * restart, ali pocetne kategorije/stranice/FAQ smiju se ubaciti SAMO jednom.
+   * Bez ovoga bi kategorija koju obrises u CMS-u bila ponovo kreirana pri
+   * sljedecem deployu (slug bi bio slobodan, pa ON CONFLICT ne bi pomogao).
+   */
+  const marker = await client.query(
+    "SELECT 1 FROM settings WHERE key = 'seeded_at'",
+  );
+  const firstRun = marker.rowCount === 0;
+
+  if (!firstRun) {
+    console.log("[seed] pocetni sadrzaj je vec ubacen ranije - preskacem ga");
+  }
+
   // ------------------------------------------------------------ prvi admin
   const email = (process.env.ADMIN_EMAIL || "admin@marketplace.ba").toLowerCase();
   const existing = await client.query(
@@ -194,40 +211,37 @@ async function main() {
   }
   console.log("[seed] postavke spremne");
 
-  // ------------------------------------------------------------ kategorije
-  let order = 0;
-  for (const cat of CATEGORIES) {
-    order += 10;
-    await client.query(
-      `INSERT INTO categories (name, slug, sort_order, active, show_in_menu, show_on_home)
-            VALUES ($1, $2, $3, TRUE, TRUE, $4)
-       ON CONFLICT (slug) DO NOTHING`,
-      [cat.name, cat.slug, order, cat.home],
-    );
-  }
-  console.log("[seed] kategorije spremne (" + CATEGORIES.length + ")");
+  // -------------------------------------------- pocetni sadrzaj (samo 1x)
+  if (firstRun) {
+    let order = 0;
+    for (const cat of CATEGORIES) {
+      order += 10;
+      await client.query(
+        `INSERT INTO categories (name, slug, sort_order, active, show_in_menu, show_on_home)
+              VALUES ($1, $2, $3, TRUE, TRUE, $4)
+         ON CONFLICT (slug) DO NOTHING`,
+        [cat.name, cat.slug, order, cat.home],
+      );
+    }
+    console.log("[seed] kategorije ubacene (" + CATEGORIES.length + ")");
 
-  // -------------------------------------------------------------- stranice
-  for (const page of PAGES) {
-    await client.query(
-      `INSERT INTO pages (slug, title, content, published, show_in_nav, nav_label, sort_order)
-            VALUES ($1, $2, $3, TRUE, $4, $5, $6)
-       ON CONFLICT (slug) DO NOTHING`,
-      [
-        page.slug,
-        page.title,
-        page.content,
-        page.show_in_nav,
-        page.nav_label,
-        page.sort_order,
-      ],
-    );
-  }
-  console.log("[seed] stranice spremne (" + PAGES.length + ")");
+    for (const page of PAGES) {
+      await client.query(
+        `INSERT INTO pages (slug, title, content, published, show_in_nav, nav_label, sort_order)
+              VALUES ($1, $2, $3, TRUE, $4, $5, $6)
+         ON CONFLICT (slug) DO NOTHING`,
+        [
+          page.slug,
+          page.title,
+          page.content,
+          page.show_in_nav,
+          page.nav_label,
+          page.sort_order,
+        ],
+      );
+    }
+    console.log("[seed] stranice ubacene (" + PAGES.length + ")");
 
-  // ------------------------------------------------------------------ FAQ
-  const faqCount = await client.query("SELECT COUNT(*)::int AS n FROM faqs");
-  if (faqCount.rows[0].n === 0) {
     let i = 0;
     for (const faq of FAQS) {
       i += 10;
@@ -236,9 +250,13 @@ async function main() {
         [faq.q, faq.a, faq.cat, i],
       );
     }
-    console.log("[seed] FAQ spreman (" + FAQS.length + ")");
-  } else {
-    console.log("[seed] FAQ vec ima zapisa, preskacem");
+    console.log("[seed] FAQ ubacen (" + FAQS.length + ")");
+
+    await client.query(
+      `INSERT INTO settings (key, value) VALUES ('seeded_at', $1::jsonb)
+       ON CONFLICT (key) DO NOTHING`,
+      [JSON.stringify({ at: new Date().toISOString() })],
+    );
   }
 
   await client.end();

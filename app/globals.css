@@ -74,28 +74,35 @@
 }
 
 @layer components {
-  /* --- dugmad ---------------------------------------------------------- */
-  .btn {
+  /* --- dugmad ----------------------------------------------------------
+     Napomena: Tailwind v4 ne dozvoljava `@apply` nad vlastitom klasom
+     (samo nad utility klasama), pa se zajednicka osnova pise kao lista
+     selektora umjesto kao `@apply btn`. */
+  .btn,
+  .btn-primary,
+  .btn-dark,
+  .btn-outline,
+  .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 px-5 py-2.5
            text-sm font-medium transition-colors
-           disabled:opacity-50 disabled:pointer-events-none;
+           disabled:pointer-events-none disabled:opacity-50;
     border-radius: var(--radius-card);
   }
 
   .btn-primary {
-    @apply btn bg-brand text-white hover:bg-brand-hover;
+    @apply bg-brand text-white hover:bg-brand-hover;
   }
 
   .btn-dark {
-    @apply btn bg-ink text-white hover:bg-ink/90;
+    @apply bg-ink text-white hover:bg-ink/90;
   }
 
   .btn-outline {
-    @apply btn border border-line-strong bg-surface text-ink hover:border-ink;
+    @apply border border-line-strong bg-surface text-ink hover:border-ink;
   }
 
   .btn-ghost {
-    @apply btn text-ink-2 hover:text-ink hover:bg-black/[0.04];
+    @apply text-ink-2 hover:bg-black/[0.04] hover:text-ink;
   }
 
   .btn-sm {

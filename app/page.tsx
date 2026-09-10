@@ -18,9 +18,15 @@ import {
 } from "@/lib/queries";
 import { getSettings } from "@/lib/settings";
 
-// Pocetna se osvjezava svakih 5 minuta - dovoljno svjeze, a bez
-// pogadjanja baze na svaki zahtjev.
-export const revalidate = 300;
+/**
+ * Renderuje se na svaki zahtjev.
+ *
+ * Namjerno NIJE staticki: pri `next build` na OctaDeployu baza jos nije
+ * dostupna (DATABASE_URL je runtime varijabla, ne build arg), pa bi se
+ * stranica zaledila u praznom stanju i takva se servirala kupcima.
+ * Kad sadrzaj bude stabilan, prelazimo na ISR sa revalidacijom iz CMS-a.
+ */
+export const dynamic = "force-dynamic";
 
 /** Sekcija sa centriranim naslovom - jedini raspored koji koristimo. */
 function Section({
