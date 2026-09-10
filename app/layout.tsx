@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { getSettings } from "@/lib/settings";
+
+/**
+ * Korijenski layout drzi samo <html>/<body> i font.
+ *
+ * Zaglavlje i podnozje shopa su u `app/(shop)/layout.tsx`, da ih CMS
+ * pod /admin ne bi naslijedio.
+ */
 
 // latin-ext je obavezan zbog naših slova: č ć đ š ž
 const inter = Inter({
@@ -42,11 +47,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="bs" className={inter.variable}>
-      <body className="flex min-h-screen flex-col">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

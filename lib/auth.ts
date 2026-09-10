@@ -2,14 +2,14 @@ import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { queryOne, execute } from "./db";
+import { SESSION_COOKIE, SESSION_DAYS } from "./session-cookie";
 
 /**
  * Prijava u CMS. Sesija je potpisani JWT u httpOnly kolacicu -
  * bez tabele sesija, bez dodatnih zavisnosti.
  */
 
-export const SESSION_COOKIE = "mb_session";
-const SESSION_DAYS = 7;
+export { SESSION_COOKIE };
 
 export type Role = "super_admin" | "admin" | "urednik";
 
@@ -23,11 +23,13 @@ export type SessionUser = {
 /** Sta koja uloga smije otvoriti u CMS-u. */
 export const ROLE_AREAS: Record<Role, string[] | "*"> = {
   super_admin: "*",
+  // Sve osim korisnika i postavki sajta.
   admin: [
     "dashboard",
     "products",
     "categories",
     "suppliers",
+    "rates",
     "orders",
     "blog",
     "pages",
@@ -35,7 +37,16 @@ export const ROLE_AREAS: Record<Role, string[] | "*"> = {
     "banners",
     "messages",
   ],
-  urednik: ["dashboard", "products", "categories", "blog", "pages", "faq", "banners"],
+  // Samo sadrzaj - ne vidi nabavne cijene, dobavljace ni narudzbe.
+  urednik: [
+    "dashboard",
+    "products",
+    "categories",
+    "blog",
+    "pages",
+    "faq",
+    "banners",
+  ],
 };
 
 export const ROLE_LABELS: Record<Role, string> = {

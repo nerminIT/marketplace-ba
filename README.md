@@ -27,7 +27,21 @@ CSV feed dobavljača
 
 Ključno pravilo: **ručno uređen proizvod se ne pregazi.** Ako u CMS-u
 zaključate cijenu (`price_locked`) ili tekst (`content_locked`), sljedeći uvoz
-ta polja preskače i osvježava samo zalihu.
+ta polja preskače i osvježava samo zalihu i nabavnu cijenu.
+
+### Kako podesiti dobavljača
+
+1. **Dobavljači → Novi dobavljač**, upišite naziv i adresu CSV feeda.
+2. **Učitaj kolone** povuče zaglavlje feeda, pa se mapiranje bira iz liste.
+3. Podesite maržu; kutija *Provjera obračuna* odmah pokazuje kako ispada cijena.
+4. Sačuvajte, pa **Pogledaj prvih 15 redova** — vidi se šta bi uvoz uradio
+   prije nego išta upiše u bazu.
+5. Kategorije iz feeda povežite sa našim; nepovezane idu u zadanu kategoriju.
+6. **Pokreni uvoz**.
+
+Za probu je u repou `public/primjer-feed.csv` — feed na engleskom, sa cijenama
+u eurima, razdvojen tačka-zarezom i jednim namjerno pokvarenim redom. Adresa za
+lokalni test: `http://localhost:3000/primjer-feed.csv`.
 
 ---
 
@@ -61,14 +75,27 @@ app/
   kontakt/                 kontakt forma + podaci
   [slug]/                  stranice iz CMS-a (o-nama, faq, uslovi…)
   actions/                 server akcije (forme)
-  admin/                   CMS  (u izradi — faza 2)
-components/                UI komponente
+  admin/
+    login/                 prijava
+    (panel)/               CMS: nadzorna ploča, proizvodi, kategorije,
+                           dobavljači, uvoz, kursna lista
+components/
+  admin/                   komponente CMS-a
+proxy.ts                   zaštita /admin ruta (u Next 16 zamjena za middleware)
 lib/
   db.ts                 PostgreSQL pool + query helperi
   money.ts              valute, marže, zaokruživanje, format KM
   auth.ts               prijava u CMS (JWT u httpOnly kolačiću)
   settings.ts           postavke sajta
   queries.ts            upiti javnog dijela sajta
+  admin-queries.ts      upiti CMS-a
+  suppliers.ts          dobavljači, pravila marže, kursna lista
+  csv.ts                CSV parser (navodnici, prelomi reda, BOM)
+  translate.ts          prevod na bosanski preko Claude API
+  plural.ts             množina u bosanskom (1 red / 2 reda / 5 redova)
+  import/
+    engine.ts           uvoz: preuzmi → mapiraj → preračunaj → prevedi → upiši
+    feed.ts             preuzimanje feeda i mapiranje redova
   sort-options.ts       opcije sortiranja (dijeli ih klijent i server)
   slug.ts               slugovi sa našim slovima
 scripts/
