@@ -94,19 +94,29 @@ async function main() {
 
   let added = 0;
 
-  for (const [name, slug, cat, costEur, margin, stock, onSale, featured] of DEMO) {
+  for (const [index, row] of DEMO.entries()) {
+    const [name, slug, cat, costEur, margin, stock, onSale, featured] = row;
+
     const { costBam, price } = priceFrom(costEur, margin);
     // Kod akcijskih artikala "stara cijena" je ista roba sa vecom marzom.
     const compareAt = onSale ? priceFrom(costEur, margin + 35).price : null;
+
+    // Razlicit broj prodatih komada i pregleda, da se "Najprodavanije"
+    // vidljivo razlikuje od "Novo u ponudi". Bez ovoga bi obje sekcije
+    // prikazale isti redoslijed i izgledale kao greska.
+    const soldCount = ((index * 7) % 23) + 1;
+    const views = soldCount * 13 + 4;
 
     const res = await client.query(
       `INSERT INTO products
          (sku, slug, name, short_description, description, category_id,
           cost_amount, cost_currency, cost_bam, price_bam, compare_at_bam,
-          stock, status, is_featured, is_new, translation_status, last_seen_at)
+          stock, status, is_featured, is_new, translation_status,
+          sold_count, views, last_seen_at)
        VALUES ($1, $2, $3, $4, $5, $6,
                $7, 'EUR', $8, $9, $10,
-               $11, 'active', $12, TRUE, 'manual', NOW())
+               $11, 'active', $12, TRUE, 'manual',
+               $13, $14, NOW())
        ON CONFLICT (slug) DO NOTHING
        RETURNING id`,
       [
@@ -123,6 +133,8 @@ async function main() {
         compareAt,
         stock,
         featured,
+        soldCount,
+        views,
       ],
     );
 

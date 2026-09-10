@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import PageHeader from "@/components/PageHeader";
 import ProductBrowser from "@/components/ProductBrowser";
 
@@ -45,21 +44,18 @@ export default async function ShopPage({
         crumbs={[{ label: "Početna", href: "/" }, { label: "Shop" }]}
       />
 
-      {/* ShopToolbar koristi useSearchParams, pa mu treba Suspense granica. */}
-      <Suspense fallback={<div className="py-24" />}>
-        <ProductBrowser
-          filters={{ q, sort, onSale, page }}
-          basePath="/shop"
-          baseParams={{
-            q,
-            sort,
-            akcija: onSale ? "1" : undefined,
-          }}
-          emptyTitle={
-            q ? `Nema rezultata za "${q}"` : "Nema proizvoda za ovaj izbor"
-          }
-        />
-      </Suspense>
+      <ProductBrowser
+        filters={{ q, sort, onSale, page }}
+        basePath="/shop"
+        baseParams={{
+          q,
+          sort,
+          akcija: onSale ? "1" : undefined,
+        }}
+        emptyTitle={
+          q ? `Nema rezultata za "${q}"` : "Nema proizvoda za ovaj izbor"
+        }
+      />
     </>
   );
 }

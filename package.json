@@ -7,10 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:migrate": "node scripts/migrate.js",
-    "db:seed": "node scripts/seed.js",
-    "db:demo": "node scripts/seed-demo.js",
-    "db:demo:clear": "node scripts/seed-demo.js --clear"
+    "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.js",
+    "db:seed": "node --env-file-if-exists=.env.local scripts/seed.js",
+    "db:demo": "node --env-file-if-exists=.env.local scripts/seed-demo.js",
+    "db:demo:clear": "node --env-file-if-exists=.env.local scripts/seed-demo.js --clear"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.72.0",
@@ -22,7 +22,6 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.15.5",

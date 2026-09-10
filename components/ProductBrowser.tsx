@@ -5,6 +5,7 @@ import ProductGrid from "./ProductGrid";
 import Pagination from "./Pagination";
 import EmptyState from "./EmptyState";
 import { getMenuCategories, listProducts, type ProductFilters } from "@/lib/queries";
+import { DEFAULT_SORT } from "@/lib/sort-options";
 import { getSettings } from "@/lib/settings";
 
 /**
@@ -28,6 +29,11 @@ export default async function ProductBrowser({
 }) {
   const settings = await getSettings();
 
+  // Toolbar sam dodaje `sort`, pa mu se ostali filteri predaju bez njega.
+  const sortlessParams = Object.fromEntries(
+    Object.entries(baseParams).filter(([key]) => key !== "sort"),
+  );
+
   const [categories, result] = await Promise.all([
     getMenuCategories(),
     listProducts({
@@ -46,7 +52,12 @@ export default async function ProductBrowser({
         />
 
         <div>
-          <ShopToolbar total={result.total} />
+          <ShopToolbar
+            total={result.total}
+            sort={filters.sort ?? DEFAULT_SORT}
+            basePath={basePath}
+            params={sortlessParams}
+          />
 
           {result.items.length === 0 ? (
             <EmptyState

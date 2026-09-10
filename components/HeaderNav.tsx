@@ -34,11 +34,18 @@ export default function HeaderNav({
   const router = useRouter();
 
   // Svaka promjena stranice zatvara sve otvoreno.
-  useEffect(() => {
+  //
+  // Ovo je namjerno podesavanje stanja u toku rendera, a ne `useEffect`:
+  // React tako odmah ponovo renderuje sa zatvorenim menijem, bez dodatnog
+  // prolaza kroz DOM. Zatvaranje kroz efekt bi izazvalo kaskadne rendere
+  // (react-hooks/set-state-in-effect).
+  const [lastPath, setLastPath] = useState(pathname);
+  if (pathname !== lastPath) {
+    setLastPath(pathname);
     setMobileOpen(false);
     setCatOpen(false);
     setSearchOpen(false);
-  }, [pathname]);
+  }
 
   // Kad je mobilni meni otvoren, stranica ispod se ne smije skrolati.
   useEffect(() => {

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import PageHeader from "@/components/PageHeader";
 import ProductBrowser from "@/components/ProductBrowser";
@@ -70,16 +69,14 @@ export default async function CategoryPage({
         crumbs={crumbs}
       />
 
-      <Suspense fallback={<div className="py-24" />}>
-        <ProductBrowser
-          filters={{ categoryIds, sort, page }}
-          basePath={`/kategorija/${category.slug}`}
-          baseParams={{ sort }}
-          activeCategorySlug={category.slug}
-          emptyTitle="U ovoj kategoriji još nema proizvoda"
-          emptyDescription="Uskoro dodajemo nove artikle. Pogledajte ostatak ponude."
-        />
-      </Suspense>
+      <ProductBrowser
+        filters={{ categoryIds, sort, page }}
+        basePath={`/kategorija/${category.slug}`}
+        baseParams={{ sort }}
+        activeCategorySlug={category.slug}
+        emptyTitle="U ovoj kategoriji još nema proizvoda"
+        emptyDescription="Uskoro dodajemo nove artikle. Pogledajte ostatak ponude."
+      />
     </>
   );
 }
