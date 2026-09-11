@@ -7,20 +7,14 @@ import PageHeader from "@/components/PageHeader";
 import PostGrid from "@/components/PostGrid";
 import SectionHeading from "@/components/SectionHeading";
 import { getLatestPosts, getPostBySlug } from "@/lib/queries";
+import { datumDugi } from "@/lib/datum";
 
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ slug: string }>;
 
 function formatDate(value: string | null): string {
-  if (!value) return "";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("bs-BA", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  return value ? datumDugi(value) : "";
 }
 
 export async function generateMetadata({
@@ -52,7 +46,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
     .map((t) => t.trim())
     .filter(Boolean);
 
-  const meta = [formatDate(post.published_at), post.author]
+  const meta = [post.published_at ? datumDugi(post.published_at) : "", post.author]
     .filter(Boolean)
     .join(" · ");
 

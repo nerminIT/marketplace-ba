@@ -3,6 +3,7 @@ import RateForm from "@/components/admin/RateForm";
 import { requireUser } from "@/lib/auth";
 import { listExchangeRates } from "@/lib/suppliers";
 import { DOBAVLJAC, pluralize } from "@/lib/plural";
+import { datumVrijeme } from "@/lib/datum";
 import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -10,15 +11,7 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Kursna lista" };
 
 function formatDateTime(value: string): string {
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleString("bs-BA", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return datumVrijeme(value);
 }
 
 export default async function RatesPage() {

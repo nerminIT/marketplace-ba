@@ -1,95 +1,248 @@
+import Image from "next/image";
 import Link from "next/link";
-import PageTitle from "@/components/admin/PageTitle";
+import PeriodFilter from "@/components/admin/PeriodFilter";
+import StatCard from "@/components/admin/charts/StatCard";
+import TrendChart from "@/components/admin/charts/TrendChart";
+import StatusBar from "@/components/admin/charts/StatusBar";
+import CategoryBars from "@/components/admin/charts/CategoryBars";
+import {
+  AlertIcon,
+  BoxIcon,
+  CancelIcon,
+  CartIcon,
+  ChartIcon,
+  LayersIcon,
+  MoneyIcon,
+  TrendIcon,
+} from "@/components/admin/AdminIcons";
+import { requireUser } from "@/lib/auth";
+import {
+  getCategoryRevenue,
+  getDailySeries,
+  getKpis,
+  getProductSales,
+  getStatusBreakdown,
+  getStockAlerts,
+  getStockSummary,
+  periodLabel,
+  PERIODS,
+  type Period,
+} from "@/lib/analytics";
 import { getDashboardStats, getRecentImports } from "@/lib/admin-queries";
 import { formatKM } from "@/lib/money";
-import { getSession } from "@/lib/auth";
+import { KOMAD, PROIZVOD, pluralize } from "@/lib/plural";
+import { danMjesec } from "@/lib/datum";
 
 export const dynamic = "force-dynamic";
 
-function Stat({
-  label,
-  value,
-  hint,
-  tone = "normal",
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function Card({
+  title,
+  subtitle,
+  action,
+  children,
+  className = "",
 }: {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "normal" | "warn";
+  title: string;
+  subtitle?: string;
+  action?: { href: string; label: string };
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="card p-5">
-      <span className="block text-[11px] font-medium tracking-[0.14em] text-ink-3 uppercase">
-        {label}
-      </span>
-      <span
-        className={`mt-2 block text-2xl font-semibold ${
-          tone === "warn" && value !== "0" ? "text-warn" : "text-ink"
-        }`}
-      >
-        {value}
-      </span>
-      {hint ? <span className="mt-1 block text-xs text-ink-3">{hint}</span> : null}
-    </div>
+    <section className={`card ${className}`}>
+      <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+        <div>
+          <h2 className="text-sm font-semibold text-ink">{title}</h2>
+          {subtitle ? (
+            <p className="mt-0.5 text-xs text-ink-3">{subtitle}</p>
+          ) : null}
+        </div>
+
+        {action ? (
+          <Link
+            href={action.href}
+            className="shrink-0 text-xs text-brand hover:underline"
+          >
+            {action.label}
+          </Link>
+        ) : null}
+      </div>
+
+      <div className="p-5">{children}</div>
+    </section>
   );
 }
 
-function formatDateTime(value: string | null): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleString("bs-BA", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+/** Lista proizvoda sa sličicom - koriste je i najbolje i najslabije prodavani. */
+function ProductList({
+  rows,
+  emptyText,
+}: {
+  rows: {
+    id: number | null;
+    name: string;
+    image_url: string | null;
+    units: number;
+    revenue: number;
+  }[];
+  emptyText: string;
+}) {
+  if (rows.length === 0) {
+    return <p className="py-10 text-center text-sm text-ink-3">{emptyText}</p>;
+  }
+
+  return (
+    <ol className="divide-y divide-line">
+      {rows.map((row, index) => (
+        <li key={`${row.id}-${index}`} className="flex items-center gap-3 py-2.5">
+          <span className="w-5 shrink-0 text-xs text-ink-3">{index + 1}.</span>
+
+          <div className="relative h-9 w-9 shrink-0 overflow-hidden border border-line bg-ground">
+            {row.image_url ? (
+              <Image
+                src={row.image_url}
+                alt=""
+                fill
+                sizes="36px"
+                className="object-contain p-0.5"
+              />
+            ) : null}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            {row.id ? (
+              <Link
+                href={`/admin/proizvodi/${row.id}`}
+                className="block truncate text-sm text-ink hover:text-brand"
+              >
+                {row.name}
+              </Link>
+            ) : (
+              <span className="block truncate text-sm text-ink">{row.name}</span>
+            )}
+            <span className="text-xs text-ink-3">
+              {pluralize(row.units, ...KOMAD)} prodano
+            </span>
+          </div>
+
+          <span className="shrink-0 text-sm font-medium text-ink">
+            {formatKM(Number(row.revenue))}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  running: "U toku",
-  success: "Uspješno",
-  failed: "Neuspješno",
-};
+function StockList({
+  rows,
+  tone,
+}: {
+  rows: { id: number; name: string; stock: number; category_name: string | null }[];
+  tone: "low" | "out";
+}) {
+  if (rows.length === 0) {
+    return (
+      <p className="py-10 text-center text-sm text-ink-3">
+        {tone === "low" ? "Nema artikala pri kraju." : "Sve je na stanju."}
+      </p>
+    );
+  }
 
-export default async function DashboardPage() {
-  const [user, stats, imports] = await Promise.all([
-    getSession(),
+  return (
+    <ul className="divide-y divide-line">
+      {rows.map((row) => (
+        <li key={row.id} className="flex items-center gap-3 py-2.5">
+          <div className="min-w-0 flex-1">
+            <Link
+              href={`/admin/proizvodi/${row.id}`}
+              className="block truncate text-sm text-ink hover:text-brand"
+            >
+              {row.name}
+            </Link>
+            {row.category_name ? (
+              <span className="text-xs text-ink-3">{row.category_name}</span>
+            ) : null}
+          </div>
+
+          <span
+            className={`chip shrink-0 ${
+              tone === "low" ? "bg-warn/10 text-warn" : "bg-sale/10 text-sale"
+            }`}
+          >
+            {tone === "low" ? `${row.stock} kom` : "Nedostupan"}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const user = await requireUser("dashboard");
+
+  const sp = await searchParams;
+  const raw = Array.isArray(sp.period) ? sp.period[0] : sp.period;
+  const period: Period = PERIODS.some((p) => p.value === raw)
+    ? (raw as Period)
+    : "mjesec";
+
+  const [
+    kpis,
+    series,
+    statuses,
+    categories,
+    topProducts,
+    bottomProducts,
+    stockAlerts,
+    stockSummary,
+    catalog,
+    imports,
+  ] = await Promise.all([
+    getKpis(period),
+    getDailySeries(30),
+    getStatusBreakdown(period),
+    getCategoryRevenue(8),
+    getProductSales("top", 8),
+    getProductSales("bottom", 8),
+    getStockAlerts(5),
+    getStockSummary(),
     getDashboardStats(),
-    getRecentImports(5),
+    getRecentImports(4),
   ]);
 
-  const margin =
-    stats.stockValueBam > 0
-      ? Math.round(
-          ((stats.stockValueBam - stats.stockCostBam) / stats.stockValueBam) *
-            100,
-        )
-      : 0;
+  const revenueSpark = series.map((d) => Number(d.revenue));
+  const profitSpark = series.map((d) => Number(d.profit));
+  const ordersSpark = series.map((d) => d.orders);
 
   const todo = [
-    stats.productsNoCategory > 0
+    catalog.productsNoCategory > 0
       ? {
-          label: `${stats.productsNoCategory} proizvoda bez kategorije`,
+          label: `${pluralize(catalog.productsNoCategory, ...PROIZVOD)} bez kategorije`,
           href: "/admin/proizvodi?filter=bez-kategorije",
         }
       : null,
-    stats.productsNoImage > 0
+    catalog.productsNoImage > 0
       ? {
-          label: `${stats.productsNoImage} proizvoda bez slike`,
+          label: `${pluralize(catalog.productsNoImage, ...PROIZVOD)} bez slike`,
           href: "/admin/proizvodi?filter=bez-slike",
         }
       : null,
-    stats.productsUntranslated > 0
+    catalog.productsUntranslated > 0
       ? {
-          label: `${stats.productsUntranslated} proizvoda čeka prevod`,
+          label: `${pluralize(catalog.productsUntranslated, ...PROIZVOD)} čeka prevod`,
           href: "/admin/proizvodi?filter=neprevedeno",
         }
       : null,
-    stats.productsDraft > 0
+    catalog.productsDraft > 0
       ? {
-          label: `${stats.productsDraft} proizvoda u statusu skice`,
+          label: `${pluralize(catalog.productsDraft, ...PROIZVOD)} u statusu skice`,
           href: "/admin/proizvodi?status=draft",
         }
       : null,
@@ -97,122 +250,124 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-6 lg:p-10">
-      <PageTitle
-        title={`Dobrodošli, ${user?.name || user?.email || ""}`}
-        description="Kratak pregled kataloga i posljednjih uvoza."
-      />
+      {/* -------------------------------------------------------- zaglavlje */}
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-ink">Nadzorna ploča</h1>
+          <p className="mt-1 text-sm text-ink-2">
+            Dobrodošli, {user.name || user.email}. Pregled prodaje i stanja
+            kataloga.
+          </p>
+        </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat
-          label="Proizvodi"
-          value={String(stats.productsTotal)}
-          hint={`${stats.productsActive} aktivnih · ${stats.productsDraft} skica`}
+        <PeriodFilter active={period} />
+      </div>
+
+      {/* ---------------------------------------------------------- brojke */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Prihod"
+          value={formatKM(kpis.revenue)}
+          change={kpis.revenueChange}
+          hint="vs prethodni period"
+          icon={<MoneyIcon />}
+          accent={1}
+          spark={revenueSpark}
         />
-        <Stat
-          label="Dobavljači"
-          value={String(stats.suppliersActive)}
-          hint={`od ukupno ${stats.suppliersTotal}`}
+        <StatCard
+          label="Narudžbe"
+          value={String(kpis.orders)}
+          change={kpis.ordersChange}
+          hint="vs prethodni period"
+          icon={<CartIcon />}
+          accent={2}
+          spark={ordersSpark}
         />
-        <Stat
-          label="Vrijednost zaliha"
-          value={formatKM(stats.stockValueBam)}
-          hint={`nabavno ${formatKM(stats.stockCostBam)} · marža ${margin}%`}
+        <StatCard
+          label="Prodano komada"
+          value={String(kpis.units)}
+          change={kpis.unitsChange}
+          hint="vs prethodni period"
+          icon={<BoxIcon />}
+          accent={3}
         />
-        <Stat
+        <StatCard
+          label="Prosječna narudžba"
+          value={formatKM(kpis.aov)}
+          change={kpis.aovChange}
+          hint="vs prethodni period"
+          icon={<ChartIcon />}
+          accent={4}
+        />
+
+        <StatCard
+          label="Profit"
+          value={formatKM(kpis.profit)}
+          change={kpis.profitChange}
+          hint={`marža ${kpis.marginPercent}%`}
+          icon={<TrendIcon />}
+          accent={1}
+          spark={profitSpark}
+        />
+        <StatCard
+          label="Otkazane"
+          value={String(kpis.cancelled)}
+          hint={periodLabel(period).toLowerCase()}
+          icon={<CancelIcon />}
+          accent={5}
+          invert
+        />
+        <StatCard
           label="Nema na stanju"
-          value={String(stats.productsOutOfStock)}
-          hint={`${stats.stockUnits} komada ukupno`}
-          tone="warn"
+          value={String(stockAlerts.outCount)}
+          hint={`${stockAlerts.lowCount} pri kraju`}
+          icon={<AlertIcon />}
+          accent={5}
+          invert
+        />
+        <StatCard
+          label="Vrijednost zaliha"
+          value={formatKM(stockSummary.retail)}
+          hint={`nabavno ${formatKM(stockSummary.cost)}`}
+          icon={<LayersIcon />}
+          accent={3}
         />
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
-        {/* ------------------------------------------------ posljednji uvozi */}
-        <div className="card">
-          <div className="flex items-center justify-between border-b border-line px-5 py-4">
-            <h2 className="text-sm font-semibold text-ink">Posljednji uvozi</h2>
-            <Link
-              href="/admin/uvoz"
-              className="text-xs text-brand hover:underline"
-            >
-              Svi uvozi
-            </Link>
-          </div>
+      {/* --------------------------------------------------------- trendovi */}
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_360px]">
+        <Card
+          title="Prihod i profit"
+          subtitle="Posljednjih 30 dana, bez otkazanih narudžbi"
+        >
+          <TrendChart data={series} />
+        </Card>
 
-          {imports.length === 0 ? (
-            <div className="px-5 py-10 text-center">
-              <p className="text-sm text-ink-2">Još nije pokrenut nijedan uvoz.</p>
-              <Link href="/admin/dobavljaci/novi" className="btn-outline btn-sm mt-4">
-                Dodaj prvog dobavljača
-              </Link>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-line text-left text-[11px] tracking-wide text-ink-3 uppercase">
-                    <th className="px-5 py-2.5 font-medium">Dobavljač</th>
-                    <th className="px-3 py-2.5 font-medium">Status</th>
-                    <th className="px-3 py-2.5 font-medium">Rezultat</th>
-                    <th className="px-5 py-2.5 font-medium">Pokrenuto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {imports.map((run) => (
-                    <tr key={run.id} className="border-b border-line last:border-0">
-                      <td className="px-5 py-3 text-ink">
-                        {run.supplier_name || "—"}
-                      </td>
-                      <td className="px-3 py-3">
-                        <span
-                          className={`chip ${
-                            run.status === "success"
-                              ? "bg-ok/10 text-ok"
-                              : run.status === "failed"
-                                ? "bg-sale/10 text-sale"
-                                : "bg-brand-soft text-brand"
-                          }`}
-                        >
-                          {STATUS_LABEL[run.status] ?? run.status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-ink-2">
-                        +{run.created_count} novih · {run.updated_count} izmjena
-                        {run.failed_count > 0 ? (
-                          <span className="text-sale">
-                            {" "}
-                            · {run.failed_count} greška
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="px-5 py-3 text-ink-3">
-                        {formatDateTime(run.started_at)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <Card title="Status narudžbi" subtitle={periodLabel(period)}>
+          <StatusBar data={statuses} />
+        </Card>
+      </div>
 
-        {/* ---------------------------------------------------- sta uraditi */}
-        <div className="card">
-          <div className="border-b border-line px-5 py-4">
-            <h2 className="text-sm font-semibold text-ink">Traži pažnju</h2>
-          </div>
+      {/* ------------------------------------------------------- kategorije */}
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_360px]">
+        <Card
+          title="Prihod po kategorijama"
+          subtitle="Sve vrijeme, bez otkazanih narudžbi"
+          action={{ href: "/admin/kategorije", label: "Kategorije" }}
+        >
+          <CategoryBars data={categories} />
+        </Card>
 
+        <Card title="Traži pažnju" subtitle="Katalog">
           {todo.length === 0 ? (
-            <p className="px-5 py-10 text-center text-sm text-ink-2">
-              Sve je uredno.
-            </p>
+            <p className="py-10 text-center text-sm text-ink-2">Sve je uredno.</p>
           ) : (
             <ul className="divide-y divide-line">
               {todo.map((item) => (
                 <li key={item.href}>
                   <Link
                     href={item.href}
-                    className="block px-5 py-3 text-sm text-ink-2 transition-colors hover:bg-brand-soft hover:text-brand"
+                    className="-mx-2 block px-2 py-2.5 text-sm text-ink-2 transition-colors hover:bg-brand-soft hover:text-brand"
                   >
                     {item.label}
                   </Link>
@@ -220,7 +375,123 @@ export default async function DashboardPage() {
               ))}
             </ul>
           )}
-        </div>
+        </Card>
+      </div>
+
+      {/* -------------------------------------------------------- proizvodi */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Card
+          title="Najprodavaniji artikli"
+          subtitle="Po broju prodatih komada"
+          action={{ href: "/admin/proizvodi", label: "Svi proizvodi" }}
+        >
+          <ProductList rows={topProducts} emptyText="Još nema prodaje." />
+        </Card>
+
+        <Card
+          title="Najslabije prodavani"
+          subtitle="Kandidati za akciju ili izbacivanje"
+        >
+          <ProductList rows={bottomProducts} emptyText="Još nema prodaje." />
+        </Card>
+      </div>
+
+      {/* ----------------------------------------------------------- zalihe */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Card
+          title="Niska zaliha"
+          subtitle="5 komada ili manje"
+          action={{ href: "/admin/proizvodi?filter=nema-zalihe", label: "Svi" }}
+        >
+          <StockList rows={stockAlerts.low} tone="low" />
+        </Card>
+
+        <Card title="Nema na stanju" subtitle="Aktivni artikli bez zalihe">
+          <StockList rows={stockAlerts.out} tone="out" />
+        </Card>
+      </div>
+
+      {/* ------------------------------------------------- sumarno + uvozi */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <Card title="Sumarni pregled zaliha" subtitle="Cijeli katalog">
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { label: "Artikala (SKU)", value: String(stockSummary.skus) },
+              { label: "Ukupno jedinica", value: String(stockSummary.units) },
+              {
+                label: "Maloprodajna vrijednost",
+                value: formatKM(stockSummary.retail),
+                tone: "ok" as const,
+              },
+              {
+                label: "Nabavna vrijednost",
+                value: formatKM(stockSummary.cost),
+                tone: "brand" as const,
+              },
+            ].map((box) => (
+              <div key={box.label} className="bg-ground p-4">
+                <span className="block text-[11px] tracking-wide text-ink-3 uppercase">
+                  {box.label}
+                </span>
+                <span
+                  className={`mt-1 block text-lg font-semibold ${
+                    box.tone === "ok"
+                      ? "text-ok"
+                      : box.tone === "brand"
+                        ? "text-brand"
+                        : "text-ink"
+                  }`}
+                >
+                  {box.value}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card
+          title="Posljednji uvozi"
+          subtitle="Od dobavljača"
+          action={{ href: "/admin/uvoz", label: "Svi uvozi" }}
+        >
+          {imports.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-sm text-ink-2">Još nije pokrenut nijedan uvoz.</p>
+              <Link href="/admin/dobavljaci/novi" className="btn-outline btn-sm mt-4">
+                Dodaj dobavljača
+              </Link>
+            </div>
+          ) : (
+            <ul className="divide-y divide-line">
+              {imports.map((run) => (
+                <li key={run.id} className="flex items-center gap-3 py-2.5">
+                  <span
+                    aria-hidden
+                    className={`h-2 w-2 shrink-0 rounded-full ${
+                      run.status === "success"
+                        ? "bg-ok"
+                        : run.status === "failed"
+                          ? "bg-sale"
+                          : "bg-brand"
+                    }`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/admin/uvoz/${run.id}`}
+                      className="block truncate text-sm text-ink hover:text-brand"
+                    >
+                      {run.supplier_name || "—"}
+                    </Link>
+                    <span className="text-xs text-ink-3">{run.message}</span>
+                  </div>
+                  <span className="shrink-0 text-xs text-ink-3">
+                    {danMjesec(run.started_at)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import PageTitle from "@/components/admin/PageTitle";
 import { requireUser } from "@/lib/auth";
 import { getRecentImports } from "@/lib/admin-queries";
 import { listSuppliers } from "@/lib/suppliers";
+import { datumVrijeme } from "@/lib/datum";
 
 export const dynamic = "force-dynamic";
 
@@ -15,16 +16,7 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 };
 
 function formatDateTime(value: string | null): string {
-  if (!value) return "—";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleString("bs-BA", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return datumVrijeme(value);
 }
 
 function duration(start: string, end: string | null): string {

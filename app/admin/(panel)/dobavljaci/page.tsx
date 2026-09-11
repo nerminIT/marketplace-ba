@@ -3,22 +3,14 @@ import PageTitle from "@/components/admin/PageTitle";
 import { requireUser } from "@/lib/auth";
 import { listSuppliers } from "@/lib/suppliers";
 import { formatKM } from "@/lib/money";
+import { datumVrijeme } from "@/lib/datum";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Dobavljači" };
 
 function formatDateTime(value: string | null): string {
-  if (!value) return "nikad";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return "nikad";
-  return d.toLocaleString("bs-BA", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return value ? datumVrijeme(value) : "nikad";
 }
 
 export default async function SuppliersPage() {

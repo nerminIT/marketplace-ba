@@ -1,16 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { PostCardData } from "@/lib/queries";
+import { datumDugi } from "@/lib/datum";
 
 function formatDate(value: string | null): string {
-  if (!value) return "";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("bs-BA", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  return value ? datumDugi(value) : "";
 }
 
 export default function PostGrid({ posts }: { posts: PostCardData[] }) {
@@ -48,7 +42,7 @@ export default function PostGrid({ posts }: { posts: PostCardData[] }) {
             ) : null}
 
             <div className="mt-auto flex items-center gap-2 text-xs text-ink-3">
-              {post.published_at ? <span>{formatDate(post.published_at)}</span> : null}
+              {post.published_at ? <span>{datumDugi(post.published_at)}</span> : null}
               {post.author ? <span>· {post.author}</span> : null}
             </div>
           </div>

@@ -28,6 +28,19 @@
   --color-ok: #1c7c54;
   --color-warn: #b45309;
 
+  /* --- Boje grafikona --------------------------------------------------
+     Namjerno nisu brend boje: brend plava (#22409a) je pretamna za mrlje
+     podataka i pada na provjeri svjetline. Ovih pet je provjereno skriptom
+     za daltonizam - najgori susjedni par ima CVD dE 9.1 i normalni 20.8,
+     iznad pragova 8 i 15. Redoslijed je fiksan i nikad se ne rotira, jer je
+     upravo redoslijed ono sto cuva razdvojivost boja. */
+  --color-viz-1: #2a78d6; /* plava     - prihod, nova */
+  --color-viz-2: #eb6834; /* narandzasta - profit, u obradi */
+  --color-viz-3: #1baf7a; /* tirkizna  - poslana */
+  --color-viz-4: #eda100; /* zuta      - zavrsena */
+  --color-viz-5: #e34948; /* crvena    - otkazana */
+  --color-viz-grid: #ebeae6; /* mreza, jedan korak od povrsine */
+
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, sans-serif;
 
