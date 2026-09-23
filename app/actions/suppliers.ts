@@ -228,7 +228,12 @@ export async function deleteSupplier(id: number): Promise<ActionState> {
 /** Učita kolone iz feeda, da se mapiranje bira iz liste umjesto napamet. */
 export async function loadFeedHeaders(
   url: string,
-  options: { delimiter?: string; encoding?: string; headers?: Record<string, string> } = {},
+  options: {
+    delimiter?: string;
+    encoding?: string;
+    headers?: Record<string, string>;
+    feedType?: string;
+  } = {},
 ): Promise<{ ok: boolean; message: string; headers: string[]; sample?: Record<string, string> }> {
   try {
     await requireUser("suppliers");
@@ -241,15 +246,31 @@ export async function loadFeedHeaders(
       encoding: options.encoding,
       headers: options.headers,
     });
-    const parsed = parseFeed(text, { delimiter: options.delimiter, maxRows: 1 });
+    const parsed = parseFeed(text, {
+      delimiter: options.delimiter,
+      feedType: options.feedType,
+      maxRows: 1,
+    });
 
     if (parsed.headers.length === 0) {
-      return { ok: false, message: "Feed nema zaglavlje sa nazivima kolona.", headers: [] };
+      return {
+        ok: false,
+        message:
+          options.feedType === "xml"
+            ? "Nije prepoznata nijedna stavka u XML-u - provjerite adresu feeda."
+            : "Feed nema zaglavlje sa nazivima kolona.",
+        headers: [],
+      };
     }
+
+    const label =
+      options.feedType === "xml"
+        ? "XML"
+        : `razdvajač: "${parsed.delimiter === "\t" ? "tab" : parsed.delimiter}"`;
 
     return {
       ok: true,
-      message: `Pronađeno ${parsed.headers.length} kolona (razdvajač: "${parsed.delimiter === "\t" ? "tab" : parsed.delimiter}").`,
+      message: `Pronađeno ${parsed.headers.length} polja (${label}).`,
       headers: parsed.headers,
       sample: parsed.rows[0],
     };

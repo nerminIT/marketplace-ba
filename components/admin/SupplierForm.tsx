@@ -112,6 +112,7 @@ export default function SupplierForm({
   const [roundMode, setRoundMode] = useState<RoundMode>(values.round_mode);
   const [sampleCost, setSampleCost] = useState(20);
 
+  const [feedType, setFeedType] = useState(values.feed_type || "csv");
   const [feedUrl, setFeedUrl] = useState(values.feed_url);
   const [delimiter, setDelimiter] = useState(values.feed_delimiter);
   const [encoding, setEncoding] = useState(values.feed_encoding);
@@ -147,6 +148,7 @@ export default function SupplierForm({
       const result = await loadFeedHeaders(feedUrl, {
         delimiter: delimiter || undefined,
         encoding: encoding || undefined,
+        feedType,
       });
       setHeaders(result.headers);
       setHeaderOk(result.ok);
@@ -254,13 +256,29 @@ export default function SupplierForm({
       {/* ---------------------------------------------------------------- feed */}
       <Section
         title="Feed proizvoda"
-        description="Adresa CSV fajla koji dobavljač redovno osvježava."
+        description="Adresa fajla koji dobavljač redovno osvježava - CSV ili XML."
       >
-        <input type="hidden" name="feed_type" value="csv" />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <label htmlFor="feed_type" className="label">
+              Format feeda
+            </label>
+            <select
+              id="feed_type"
+              name="feed_type"
+              value={feedType}
+              onChange={(e) => setFeedType(e.target.value)}
+              className="field"
+            >
+              <option value="csv">CSV / tekstualni</option>
+              <option value="xml">XML</option>
+            </select>
+          </div>
+        </div>
 
-        <div>
+        <div className="mt-4">
           <label htmlFor="feed_url" className="label">
-            Adresa CSV feeda
+            Adresa feeda
           </label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
@@ -269,7 +287,11 @@ export default function SupplierForm({
               value={feedUrl}
               onChange={(e) => setFeedUrl(e.target.value)}
               className="field flex-1"
-              placeholder="https://dobavljac.com/feed/proizvodi.csv"
+              placeholder={
+                feedType === "xml"
+                  ? "https://dobavljac.com/feed/proizvodi.xml"
+                  : "https://dobavljac.com/feed/proizvodi.csv"
+              }
             />
             <button
               type="button"
@@ -289,23 +311,25 @@ export default function SupplierForm({
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <div>
-            <label htmlFor="feed_delimiter" className="label">
-              Razdvajač
-            </label>
-            <select
-              id="feed_delimiter"
-              name="feed_delimiter"
-              value={delimiter}
-              onChange={(e) => setDelimiter(e.target.value)}
-              className="field"
-            >
-              <option value=",">Zarez ( , )</option>
-              <option value=";">Tačka-zarez ( ; )</option>
-              <option value={"\t"}>Tab</option>
-              <option value="|">Uspravna crta ( | )</option>
-            </select>
-          </div>
+          {feedType === "xml" ? null : (
+            <div>
+              <label htmlFor="feed_delimiter" className="label">
+                Razdvajač
+              </label>
+              <select
+                id="feed_delimiter"
+                name="feed_delimiter"
+                value={delimiter}
+                onChange={(e) => setDelimiter(e.target.value)}
+                className="field"
+              >
+                <option value=",">Zarez ( , )</option>
+                <option value=";">Tačka-zarez ( ; )</option>
+                <option value={"\t"}>Tab</option>
+                <option value="|">Uspravna crta ( | )</option>
+              </select>
+            </div>
+          )}
 
           <div>
             <label htmlFor="feed_encoding" className="label">

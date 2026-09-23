@@ -150,6 +150,7 @@ async function loadFeed(
 
   const parsed = parseFeed(text, {
     delimiter: supplier.feed_delimiter || undefined,
+    feedType: supplier.feed_type,
     maxRows,
   });
 
@@ -192,7 +193,7 @@ export async function previewImport(
   }
 
   if (parsed.headers.length === 0) {
-    return { ...empty, message: "Feed je prazan ili nije u CSV formatu." };
+    return { ...empty, message: "Feed je prazan ili format nije prepoznat." };
   }
 
   const limit = Math.min(options.limit ?? 15, 100);
@@ -341,7 +342,7 @@ export async function runImport(
   }
 
   if (parsed.headers.length === 0) {
-    return fail(runId, "Feed je prazan ili nije u CSV formatu.");
+    return fail(runId, "Feed je prazan ili format nije prepoznat.");
   }
 
   counts.rowsTotal = parsed.rows.length;

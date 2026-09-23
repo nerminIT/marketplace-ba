@@ -1,5 +1,6 @@
 import "server-only";
 import { parseCsv, type ParsedCsv } from "@/lib/csv";
+import { parseXml } from "@/lib/xml";
 import { parseNumber } from "@/lib/money";
 import type { FieldMap, MappedRow } from "./types";
 
@@ -50,22 +51,49 @@ export async function fetchFeedText(
   }
 }
 
+/**
+ * Razloži feed u redove, bez obzira na format kod dobavljača.
+ *
+ * XML feed nema razdvajač ni "maxRows u zaglavlju" - koristi isti ulazni
+ * oblik radi jednostavnosti poziva, ali ignoriše `delimiter`.
+ */
 export function parseFeed(
   text: string,
-  options: { delimiter?: string; maxRows?: number } = {},
+  options: { delimiter?: string; maxRows?: number; feedType?: string } = {},
 ): ParsedCsv {
+  if ((options.feedType || "csv").toLowerCase() === "xml") {
+    const parsed = parseXml(text, { maxRows: options.maxRows });
+    return { headers: parsed.headers, rows: parsed.rows, delimiter: "" };
+  }
+
   return parseCsv(text, options);
 }
 
-/** Slike znaju stizati razdvojene zarezom, tačka-zarezom, cijevi ili razmakom. */
+/**
+ * Slike znaju stizati razdvojene zarezom, tačka-zarezom, cijevi ili
+ * razmakom. Neki dobavljači (npr. Morele) ih spajaju crticom neposredno
+ * ispred sljedećeg "https://", bez ikakvog drugog razdvajača - to se prvo
+ * pretvori u obični razdvajač.
+ */
 function splitImages(raw: string): string[] {
   if (!raw) return [];
 
   return raw
+    .replace(/-(?=https?:\/\/)/gi, "|")
     .split(/[|;,\s]+/)
     .map((url) => url.trim())
     .filter((url) => /^https?:\/\//i.test(url))
     .slice(0, 10);
+}
+
+/**
+ * Neki dobavljači (Morele je primjer) drže povrate i oštećene primjerke u
+ * istom feedu kao pojedinačne stavke, obilježene sa "[outlet]" u nazivu -
+ * uvijek bez zalihe, bez opisa stanja i bez posebne cijene. Za njih uvoz
+ * nema šta uraditi pa se preskaču prije nego što uđu u obradu.
+ */
+function isOutletRow(name: string): boolean {
+  return /\[outlet\]/i.test(name);
 }
 
 /** Prevede jedan red feeda u naša polja. Vraća null ako red nije upotrebljiv. */
@@ -86,6 +114,9 @@ export function mapRow(
 
   const name = get("name");
   if (!name) return { error: `Red ${externalId} nema naziv.` };
+  if (isOutletRow(name)) {
+    return { error: `Red ${externalId} je outlet stavka (povrat/oštećen primjerak) - preskočeno.` };
+  }
 
   const costRaw = get("cost");
   const costAmount = parseNumber(costRaw);
